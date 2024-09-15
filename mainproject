@@ -70,13 +70,12 @@ public class VehicleRentalSystem {
 
     private void showWelcomePage() {
         clearScreen();
-        System.out.println("===========================================");
+        System.out.println("==========================================");
         System.out.println("         Welcome to Vehicle Rental   ");
-        System.out.println("  Your one-stop solution for vehicle  ");
+        System.out.println("    Your one-stop solution for vehicle  ");
         System.out.println("           rentals and returns!      ");
-        System.out.println("===========================================");
+        System.out.println("==========================================");
         System.out.println();
-        showAds();
         showWelcomeOptions();
     }
 
@@ -98,7 +97,6 @@ public class VehicleRentalSystem {
             writer.write(username + ":" + password);
             writer.newLine();
             System.out.println("User registered successfully.");
-1
             if (signIn(scanner)) {
                 System.out.println("Sign in successful.");
                 userMenu(scanner);
@@ -137,7 +135,7 @@ public class VehicleRentalSystem {
             System.out.print("Choose an option: ");
 
             int choice = scanner.nextInt();
-            scanner.nextLine(); 
+            scanner.nextLine(); // Consume newline
 
             switch (choice) {
                 case 1:
@@ -188,10 +186,10 @@ public class VehicleRentalSystem {
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
-            system.showWelcomePage(); 
+            system.showWelcomePage(); // Show the welcome page before main menu
 
             int choice = scanner.nextInt();
-            scanner.nextLine(); 
+            scanner.nextLine(); // Consume newline
 
             switch (choice) {
                 case 1:
