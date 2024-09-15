@@ -1,0 +1,386 @@
+import java.io.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
+
+public class VehicleRentalSystem {
+    static class Vehicle {
+        String id;
+        String model;
+        boolean available;
+
+        Vehicle(String id, String model) {
+            this.id = id;
+            this.model = model;
+            this.available = true;
+        }
+
+        @Override
+        public String toString() {
+            return "ID: " + id + ", Model: " + model + ", Available: " + available;
+        }
+    }
+
+    private List<Vehicle> vehicles = new ArrayList<>();
+    private static final String USER_FILE = "users.txt";
+    private static final String VEHICLE_FILE = "vehicles.txt";
+
+    public void addVehicle(String id, String model) {
+        if (vehicles.stream().anyMatch(v -> v.id.equals(id))) {
+            System.out.println("Vehicle with ID " + id + " already exists.");
+            return; // Exit if the vehicle already exists
+        }
+        vehicles.add(new Vehicle(id, model));
+        saveVehiclesToFile();
+    }
+
+    public void listAvailableVehicles() {
+        System.out.println("Available Vehicles:");
+        for (Vehicle vehicle : vehicles) {
+            if (vehicle.available) {
+                System.out.println(vehicle);
+            }
+        }
+    }
+
+    public boolean rentVehicle(String id) {
+        for (Vehicle vehicle : vehicles) {
+            if (vehicle.id.equals(id) && vehicle.available) {
+                vehicle.available = false;
+                saveVehiclesToFile();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean returnVehicle(String id) {
+        for (Vehicle vehicle : vehicles) {
+            if (vehicle.id.equals(id) && !vehicle.available) {
+                vehicle.available = true;
+                saveVehiclesToFile();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void clearScreen() {
+        try {
+            if (System.getProperty("os.name").startsWith("Windows")) {
+                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+            } else {
+                System.out.print("\033[H\033[2J");
+                System.out.flush();
+            }
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showWelcomePage() {
+        clearScreen();
+        System.out.println("==========================================");
+        System.out.println("         Welcome to Vehicle Rental   ");
+        System.out.println("    Your one-stop solution for vehicle  ");
+        System.out.println("           rentals and returns!      ");
+        System.out.println("==========================================");
+        System.out.println();
+        showWelcomeOptions();
+    }
+
+    private void showWelcomeOptions() {
+        System.out.println("First things first");
+        System.out.println("1. Sign Up");
+        System.out.println("2. Login");
+        System.out.println("3. Exit");
+        System.out.print("Choose an option: ");
+    }
+
+    private void signUp(Scanner scanner) {
+        System.out.println("Sign Up");
+    
+        String username = ""; // Initialize username
+        boolean usernameAvailable = false;
+    
+        // Loop until a unique username is entered
+        while (!usernameAvailable) {
+            System.out.print("Enter username: ");
+            username = scanner.nextLine();
+    
+            try {
+                if (isUsernameTaken(username)) {
+                    System.out.println("Username already taken. Please try a different one.");
+                } else {
+                    usernameAvailable = true; // Username is available, exit loop
+                }
+            } catch (IOException e) {
+                System.err.println("Error occurred while checking username: " + e.getMessage());
+                return; // Exit the method in case of an error
+            }
+        }
+    
+        String password;
+        String confirmPassword;
+    
+        // Loop until the passwords match
+        while (true) {
+            System.out.print("Enter password: ");
+            password = scanner.nextLine();
+            System.out.print("Confirm password: ");
+            confirmPassword = scanner.nextLine();
+    
+            if (!password.equals(confirmPassword)) {
+                System.out.println("Passwords do not match. Please try again.");
+            } else {
+                break; // Exit loop if passwords match
+            }
+        }
+    
+        // Write user details to file
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_FILE, true))) {
+            String hashedPassword = hashPassword(password);
+            writer.write(username + ":" + hashedPassword);
+            writer.newLine();
+            System.out.println("User registered successfully.");
+    
+            // Ask the user if they want to return to the welcome page or terminate the program
+            while (true) {
+                System.out.print("Do you want to return to the welcome page (Y) or terminate the program (N)? ");
+                String choice = scanner.nextLine();
+                if (choice.equalsIgnoreCase("Y")) {
+                    // Clear screen and show welcome page
+                    clearScreen();
+                    showWelcomePage();
+                    break;
+                } else if (choice.equalsIgnoreCase("N")) {
+                    System.out.println("Terminating the program...");
+                    System.exit(0); // Terminate the program
+                } else {
+                    System.out.println("Invalid choice. Please enter Y or N.");
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error occurred while signing up: " + e.getMessage());
+        }
+    }
+    
+
+    private boolean signIn(Scanner scanner) {
+        System.out.println("Login");
+        System.out.print("Enter username: ");
+        String username = scanner.nextLine();
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+        String hashedPassword = hashPassword(password);
+
+        boolean usernameExists = false;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(USER_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(":");
+                if (parts[0].equals(username)) {
+                    usernameExists = true;
+                    if (parts[1].equals(hashedPassword)) {
+                        return true; // Successful sign-in
+                    } else {
+                        System.out.println("Incorrect password for the username.");
+                        return false; // Incorrect password
+                    }
+                }
+            }
+
+            // If username does not exist
+            if (!usernameExists) {
+                System.out.println("Username does not exist.");
+            }
+            
+        } catch (IOException e) {
+            System.err.println("Error occurred while signing in: " + e.getMessage());
+        }
+
+        return false; // Default case if no match is found
+    }
+
+    private String hashPassword(String password) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = md.digest(password.getBytes());
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error hashing password: " + e.getMessage(), e);
+        }
+    }
+
+    private boolean isUsernameTaken(String username) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(USER_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(":");
+                if (parts[0].equals(username)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void saveVehiclesToFile() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(VEHICLE_FILE))) {
+            for (Vehicle vehicle : vehicles) {
+                writer.write(vehicle.id + "," + vehicle.model + "," + vehicle.available);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.err.println("Error occurred while saving vehicles: " + e.getMessage());
+        }
+    }
+
+    private void loadVehiclesFromFile() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(VEHICLE_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length == 3) {
+                    String id = parts[0];
+                    String model = parts[1];
+                    boolean available = Boolean.parseBoolean(parts[2]);
+                    vehicles.add(new Vehicle(id, model) {{
+                        this.available = available;
+                    }});
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error occurred while loading vehicles: " + e.getMessage());
+        }
+    }
+
+    private void userMenu(Scanner scanner) {
+        while (true) {
+            clearScreen();
+            System.out.println("Vehicle Rental System");
+            System.out.println("1. List Available Vehicles");
+            System.out.println("2. Rent Vehicle");
+            System.out.println("3. Return Vehicle");
+            System.out.println("4. Return to Main Menu");
+            System.out.print("Choose an option: ");
+
+            int choice;
+            try {
+                choice = Integer.parseInt(scanner.nextLine());
+                if (choice < 1 || choice > 4) {
+                    System.out.println("Invalid choice. Please enter a number between 1 and 4.");
+                    continue;
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+                continue;
+            }
+
+            switch (choice) {
+                case 1:
+                    clearScreen();
+                    listAvailableVehicles();
+                    break;
+                case 2:
+                    clearScreen();
+                    System.out.print("Enter Vehicle ID to rent: ");
+                    String rentId = scanner.nextLine();
+                    if (rentVehicle(rentId)) {
+                        System.out.println("Vehicle rented successfully.");
+                    } else {
+                        System.out.println("Vehicle not available or invalid ID.");
+                    }
+                    break;
+                case 3:
+                    clearScreen();
+                    System.out.print("Enter Vehicle ID to return: ");
+                    String returnId = scanner.nextLine();
+                    if (returnVehicle(returnId)) {
+                        System.out.println("Vehicle returned successfully.");
+                    } else {
+                        System.out.println("Invalid Vehicle ID or vehicle was not rented.");
+                    }
+                    break;
+                case 4:
+                    return;
+                default:
+                    clearScreen();
+                    System.out.println("Invalid choice. Please try again.");
+            }
+
+            System.out.print("Do you want to return to the menu? (Y/N): ");
+            String continueChoice = scanner.nextLine();
+            if (!continueChoice.equalsIgnoreCase("Y")) {
+                break;
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        VehicleRentalSystem system = new VehicleRentalSystem();
+        system.loadVehiclesFromFile(); // Load vehicles from file on startup
+
+        // Pre-load vehicles only if the list is empty
+        if (system.vehicles.isEmpty()) {
+            system.addVehicle("V001", "Toyota Camry");
+            system.addVehicle("V002", "Honda Civic");
+            system.addVehicle("V003", "Ford Focus");
+            system.addVehicle("V004","Isuzu Crosswind");
+            system.addVehicle("V005","Toyota Vios MT");
+            system.addVehicle("V006","Toyota Fortuner");
+            system.addVehicle("V007","Toyota Innova");
+            system.addVehicle("V008","Toyota Super Grandia");
+            system.addVehicle("V009","BMW Sedan");
+            system.addVehicle("V010","Ford Mustang");
+            
+        }
+
+        Scanner scanner = new Scanner(System.in);
+
+        while (true) {
+            system.showWelcomePage(); // Show the welcome page before main menu
+
+            int choice;
+            try {
+                choice = Integer.parseInt(scanner.nextLine());
+                if (choice < 1 || choice > 3) {
+                    System.out.println("Invalid choice. Please enter a number between 1 and 3.");
+                    continue;
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+                continue;
+            }
+
+            switch (choice) {
+                case 1:
+                    system.clearScreen();
+                    system.signUp(scanner);
+                    // After sign-up, control returns to the main loop to check if the user wants to log in
+                    break;
+                case 2:
+                    system.clearScreen();
+                    if (system.signIn(scanner)) {
+                        System.out.println("Sign in successful.");
+                        system.userMenu(scanner);
+                    } else {
+                        System.out.println("Invalid username or password.");
+                    }
+                    break;
+                case 3:
+                    System.out.println("Exiting...");
+                    scanner.close();
+                    return;
+                default:
+                    system.clearScreen();
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+}
