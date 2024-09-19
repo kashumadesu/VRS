@@ -91,23 +91,52 @@ public class VehicleRentalSystem {
 
     private void showWelcomeOptions() {
         System.out.println("First things first");
-        System.out.println("1. Sign Up");
+        System.out.println("1. Register");
         System.out.println("2. Login");
         System.out.println("3. Exit");
         System.out.print("Choose an option: ");
     }
 
-    private void signUp(Scanner scanner) {
-        System.out.println("Sign Up");
-    
-        String username = ""; // Initialize username
+    private void register(Scanner scanner) {
+        System.out.println("Register");
+
+        // Gather user's personal information
+        System.out.print("Enter First Name: ");
+        String firstName = scanner.nextLine();
+
+        System.out.print("Enter Middle Name (or press Enter if not applicable): ");
+        String middleName = scanner.nextLine();
+
+        System.out.print("Enter Last Name: ");
+        String lastName = scanner.nextLine();
+
+        System.out.print("Enter Age: ");
+        int age = Integer.parseInt(scanner.nextLine());
+
+        System.out.print("Enter Address: ");
+        String address = scanner.nextLine();
+
+        System.out.print("Enter Contact Number: ");
+        String contactNumber = scanner.nextLine();
+
+        System.out.print("Are you employed? (Y/N): ");
+        String employedStatus = scanner.nextLine();
+
+        String salary = "";
+        if (employedStatus.equalsIgnoreCase("Y")) {
+            System.out.print("Enter Salary: ");
+            salary = scanner.nextLine();
+        }
+
+        // Check for unique username and password
+        String username = "";
         boolean usernameAvailable = false;
-    
+
         // Loop until a unique username is entered
         while (!usernameAvailable) {
             System.out.print("Enter username: ");
             username = scanner.nextLine();
-    
+
             try {
                 if (isUsernameTaken(username)) {
                     System.out.println("Username already taken. Please try a different one.");
@@ -119,31 +148,34 @@ public class VehicleRentalSystem {
                 return; // Exit the method in case of an error
             }
         }
-    
+
         String password;
         String confirmPassword;
-    
+
         // Loop until the passwords match
         while (true) {
             System.out.print("Enter password: ");
             password = scanner.nextLine();
             System.out.print("Confirm password: ");
             confirmPassword = scanner.nextLine();
-    
+
             if (!password.equals(confirmPassword)) {
                 System.out.println("Passwords do not match. Please try again.");
             } else {
                 break; // Exit loop if passwords match
             }
         }
-    
+
         // Write user details to file
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_FILE, true))) {
             String hashedPassword = hashPassword(password);
-            writer.write(username + ":" + hashedPassword);
+            writer.write(username + ":" + hashedPassword + ":" +
+                    firstName + ":" + (middleName.isEmpty() ? "-" : middleName) + ":" +
+                    lastName + ":" + age + ":" + address + ":" + contactNumber + ":" +
+                    (employedStatus.equalsIgnoreCase("Y") ? salary : "N/A"));
             writer.newLine();
             System.out.println("User registered successfully.");
-    
+
             // Ask the user if they want to return to the welcome page or terminate the program
             while (true) {
                 System.out.print("Do you want to return to the welcome page (Y) or terminate the program (N)? ");
@@ -161,10 +193,9 @@ public class VehicleRentalSystem {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Error occurred while signing up: " + e.getMessage());
+            System.err.println("Error occurred while registering: " + e.getMessage());
         }
     }
-    
 
     private boolean signIn(Scanner scanner) {
         System.out.println("Login");
@@ -195,7 +226,6 @@ public class VehicleRentalSystem {
             if (!usernameExists) {
                 System.out.println("Username does not exist.");
             }
-            
         } catch (IOException e) {
             System.err.println("Error occurred while signing in: " + e.getMessage());
         }
@@ -331,14 +361,13 @@ public class VehicleRentalSystem {
             system.addVehicle("V001", "Toyota Camry");
             system.addVehicle("V002", "Honda Civic");
             system.addVehicle("V003", "Ford Focus");
-            system.addVehicle("V004","Isuzu Crosswind");
-            system.addVehicle("V005","Toyota Vios MT");
-            system.addVehicle("V006","Toyota Fortuner");
-            system.addVehicle("V007","Toyota Innova");
-            system.addVehicle("V008","Toyota Super Grandia");
-            system.addVehicle("V009","BMW Sedan");
-            system.addVehicle("V010","Ford Mustang");
-            
+            system.addVehicle("V004", "Isuzu Crosswind");
+            system.addVehicle("V005", "Toyota Vios MT");
+            system.addVehicle("V006", "Toyota Fortuner");
+            system.addVehicle("V007", "Toyota Innova");
+            system.addVehicle("V008", "Toyota Super Grandia");
+            system.addVehicle("V009", "BMW Sedan");
+            system.addVehicle("V010", "Ford Mustang");
         }
 
         Scanner scanner = new Scanner(System.in);
@@ -361,8 +390,8 @@ public class VehicleRentalSystem {
             switch (choice) {
                 case 1:
                     system.clearScreen();
-                    system.signUp(scanner);
-                    // After sign-up, control returns to the main loop to check if the user wants to log in
+                    system.register(scanner);
+                    // After registration, control returns to the main loop to check if the user wants to log in
                     break;
                 case 2:
                     system.clearScreen();
